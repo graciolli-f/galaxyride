@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MotionCanvas Grid Example</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Configuration
+        const config = {
+            gridSize: 40,          // Size of grid cells
+            lineWidth: 0.5,        // Line thickness
+            color: '#4488ff',      // Line color
+            speed: .5,              // Movement speed
+            perspective: 1000,     // Perspective strength
+            rotation: 0.2          // Grid rotation (in radians)
+        };
+
+        function drawGrid(time) {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Calculate grid dimensions
+            const gridWidth = 800;  // Fixed grid width
+            const gridHeight = 800; // Fixed grid height
+
+            // Calculate perspective and movement
+            const progress = (time * config.speed) % 1000;
+            const scale = config.perspective / (config.perspective + progress);
+            
+            // Calculate grid corners with perspective
+            const points = [
+                { x: -gridWidth/2, y: -gridHeight/2 },
+                { x: gridWidth/2, y: -gridHeight/2 },
+                { x: gridWidth/2, y: gridHeight/2 },
+                { x: -gridWidth/2, y: gridHeight/2 }
+            ].map(p => {
+                // Apply rotation
+                const rotX = p.x * Math.cos(config.rotation);
+                const rotY = p.y;
+                
+                // Apply perspective
+                return {
+                    x: centerX + rotX * scale,
+                    y: centerY + rotY * scale
+                };
+            });
+
+            // Draw grid lines
+            ctx.strokeStyle = `rgba(68, 136, 255, ${0.8 - progress/1000 * 0.5})`;
+            ctx.lineWidth = config.lineWidth;
+
+            // Draw vertical lines
+            const numVerticalLines = 20;
+            for(let i = 0; i <= numVerticalLines; i++) {
+                const progress = i / numVerticalLines;
+                const startX = points[0].x + (points[1].x - points[0].x) * progress;
+                const startY = points[0].y + (points[1].y - points[0].y) * progress;
+                const endX = points[3].x + (points[2].x - points[3].x) * progress;
+                const endY = points[3].y + (points[2].y - points[3].y) * progress;
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            }
+
+            // Draw horizontal lines
+            const numHorizontalLines = 20;
+            for(let i = 0; i <= numHorizontalLines; i++) {
+                const progress = i / numHorizontalLines;
+                const startX = points[0].x + (points[3].x - points[0].x) * progress;
+                const startY = points[0].y + (points[3].y - points[0].y) * progress;
+                const endX = points[1].x + (points[2].x - points[1].x) * progress;
+                const endY = points[1].y + (points[2].y - points[1].y) * progress;
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            }
+        }
+
+        function animate(timestamp) {
+            drawGrid(timestamp);
+            requestAnimationFrame(animate);
+        }
+
+        animate(0);
+    </script>
+</body>
+</html> 
