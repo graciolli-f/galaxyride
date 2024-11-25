@@ -18,27 +18,61 @@
 
         const config = {
             particles: 2000,
-            arms: 1,          // Number of spiral arms
+            arms: 1,
             baseHue: 300,     // Base color (purple)
-            armWidth: 0.05,    // Width of spiral arms
+            armWidth: 0.05,
             rotationSpeed: 0.002,
             expansionSpeed: 0.3,
             particleSize: .5,
             tailLength: 0.01,
-            centerGlow: true
+            centerGlow: true,
+            colors: {
+                start: '#ff0088',   // Color at the outer edge
+                middle: '#8800ff',  // Optional middle color
+                end: '#00ffff',     // Color at the center
+                glow: 'rgba(255, 0, 136, 0.3)'  // Center glow color
+            }
         };
 
         const particles = [];
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
 
-        // Create particles in a spiral galaxy pattern
+        // Helper function to interpolate between three colors
+        function interpolateColors(color1, color2, color3, factor) {
+            if (factor < 0.5) {
+                // Interpolate between first and second color
+                return interpolateColor(color1, color2, factor * 2);
+            } else {
+                // Interpolate between second and third color
+                return interpolateColor(color2, color3, (factor - 0.5) * 2);
+            }
+        }
+
+        // Helper function to interpolate between two colors
+        function interpolateColor(color1, color2, factor) {
+            const hex2rgb = (hex) => {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return [r, g, b];
+            };
+
+            const c1 = hex2rgb(color1);
+            const c2 = hex2rgb(color2);
+            
+            const r = Math.round(c1[0] + (c2[0] - c1[0]) * factor);
+            const g = Math.round(c1[1] + (c2[1] - c1[1]) * factor);
+            const b = Math.round(c1[2] + (c2[2] - c1[2]) * factor);
+            
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        // Create particles in a spiral pattern
         for(let i = 0; i < config.particles; i++) {
-            // Calculate spiral position
             const angle = Math.random() * Math.PI * 2;
             const distance = Math.random() * Math.min(canvas.width, canvas.height) * 0.4;
             
-            // Add spiral arm effect
             const armOffset = (angle % (Math.PI * 2 / config.arms)) / (Math.PI * 2 / config.arms) - 0.5;
             const distanceOffset = Math.exp(-Math.abs(armOffset) / config.armWidth) * 50;
 
@@ -49,35 +83,29 @@
                 distance: distance,
                 size: Math.random() * config.particleSize + 1,
                 speed: (0.1 + Math.random() * 0.2) * config.rotationSpeed,
-                hue: config.baseHue + Math.random() * 60 - 30,
                 opacity: Math.random() * 0.5 + 0.5,
                 trail: []
             });
         }
 
         function draw() {
-            // Create fade effect
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw center glow
             if (config.centerGlow) {
                 const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 200);
-                gradient.addColorStop(0, `hsla(${config.baseHue}, 100%, 50%, 0.3)`);
+                gradient.addColorStop(0, config.colors.glow);
                 gradient.addColorStop(1, 'transparent');
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
-            // Update and draw particles
             particles.forEach(p => {
-                // Store position for trail
                 p.trail.push({ x: p.x, y: p.y });
                 if (p.trail.length > 20) {
                     p.trail.shift();
                 }
 
-                // Update position
                 p.angle += p.speed * (1 - p.distance / 1000);
                 p.distance -= config.expansionSpeed;
 
@@ -86,14 +114,12 @@
                     p.trail = [];
                 }
 
-                // Calculate new position with spiral arm offset
                 const armOffset = (p.angle % (Math.PI * 2 / config.arms)) / (Math.PI * 2 / config.arms) - 0.5;
                 const distanceOffset = Math.exp(-Math.abs(armOffset) / config.armWidth) * 50;
                 
                 p.x = centerX + Math.cos(p.angle) * (p.distance + distanceOffset);
                 p.y = centerY + Math.sin(p.angle) * (p.distance + distanceOffset);
 
-                // Draw particle trail
                 if (p.trail.length > 1) {
                     ctx.beginPath();
                     ctx.moveTo(p.trail[0].x, p.trail[0].y);
@@ -102,7 +128,13 @@
                         ctx.lineTo(p.trail[i].x, p.trail[i].y);
                     }
 
-                    ctx.strokeStyle = `hsla(${p.hue}, 100%, 50%, ${p.opacity})`;
+                    // Calculate color based on distance from center
+                    const progress = 1 - (p.distance / (Math.min(canvas.width, canvas.height) * 0.4));
+                    const color = config.colors.middle ? 
+                        interpolateColors(config.colors.start, config.colors.middle, config.colors.end, progress) :
+                        interpolateColor(config.colors.start, config.colors.end, progress);
+
+                    ctx.strokeStyle = color;
                     ctx.lineWidth = p.size;
                     ctx.lineCap = 'round';
                     ctx.stroke();
@@ -114,7 +146,6 @@
 
         draw();
 
-        // Handle window resize
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;

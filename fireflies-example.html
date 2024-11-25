@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MotionCanvas Fireflies Example</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const config = {
+            fireflies: 500,
+            maxSpeed: 1,
+            size: 4,
+            glowSize: 20,
+            color: 'purple',
+            wanderStrength: 0.1,
+            fadeSpeed: 0.02,
+            magnetic: true,           // Enable/disable magnetic effect
+            magneticRadius: 200,      // Radius of magnetic influence
+            magneticStrength: 0.2     // Strength of magnetic pull
+        };
+
+        let mouseX = 0;
+        let mouseY = 0;
+
+        const fireflies = [];
+
+        // Create fireflies
+        for(let i = 0; i < config.fireflies; i++) {
+            fireflies.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * config.maxSpeed,
+                vy: (Math.random() - 0.5) * config.maxSpeed,
+                phase: Math.random() * Math.PI * 2,
+                brightness: Math.random(),
+                targetX: 0,
+                targetY: 0,
+                isAttracted: false
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            fireflies.forEach(fly => {
+                // Update phase for pulsing effect
+                fly.phase += 0.05;
+                fly.brightness = Math.sin(fly.phase) * 0.5 + 0.5;
+
+                if (config.magnetic) {
+                    // Calculate distance to mouse
+                    const dx = mouseX - fly.x;
+                    const dy = mouseY - fly.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < config.magneticRadius) {
+                        // Apply magnetic attraction
+                        const force = (1 - distance / config.magneticRadius) * config.magneticStrength;
+                        fly.vx += dx * force;
+                        fly.vy += dy * force;
+                        fly.isAttracted = true;
+                    } else {
+                        fly.isAttracted = false;
+                    }
+                }
+
+                // Add random movement if not attracted
+                if (!fly.isAttracted) {
+                    fly.vx += (Math.random() - 0.5) * config.wanderStrength;
+                    fly.vy += (Math.random() - 0.5) * config.wanderStrength;
+                }
+
+                // Limit speed
+                const speed = Math.sqrt(fly.vx * fly.vx + fly.vy * fly.vy);
+                if (speed > config.maxSpeed) {
+                    fly.vx = (fly.vx / speed) * config.maxSpeed;
+                    fly.vy = (fly.vy / speed) * config.maxSpeed;
+                }
+
+                // Update position
+                fly.x += fly.vx;
+                fly.y += fly.vy;
+
+                // Wrap around screen
+                if (fly.x < 0) fly.x = canvas.width;
+                if (fly.x > canvas.width) fly.x = 0;
+                if (fly.y < 0) fly.y = canvas.height;
+                if (fly.y > canvas.height) fly.y = 0;
+
+                // Draw glow
+                const gradient = ctx.createRadialGradient(
+                    fly.x, fly.y, 0,
+                    fly.x, fly.y, config.glowSize
+                );
+                gradient.addColorStop(0, `rgba(128, 0, 128, ${0.3 * fly.brightness})`);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(fly.x, fly.y, config.glowSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw firefly
+                ctx.beginPath();
+                ctx.arc(fly.x, fly.y, config.size * fly.brightness, 0, Math.PI * 2);
+                ctx.fillStyle = config.color;
+                ctx.fill();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        // Track mouse position
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Reset mouse position when mouse leaves canvas
+        canvas.addEventListener('mouseleave', () => {
+            mouseX = -1000;
+            mouseY = -1000;
+        });
+
+        draw();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html> 
