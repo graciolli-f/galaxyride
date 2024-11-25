@@ -25,7 +25,9 @@
             colorStart: '#ff0088',
             colorEnd: '#00ffff',
             inwardSpeed: 0.5,
-            trail: 8
+            trail: 8,
+            loop: false,          // Set to true to make particles loop back to outside
+            allParticlesActive: true  // New flag to track if all particles are still active
         };
 
         const particles = [];
@@ -52,40 +54,48 @@
         }
 
         // Initialize particles
-        for(let i = 0; i < config.particles; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = config.maxRadius;
-            particles.push({
-                x: centerX + Math.cos(angle) * radius,
-                y: centerY + Math.sin(angle) * radius,
-                angle: angle,
-                radius: radius,
-                speed: config.speed * (0.5 + Math.random() * 0.5),
-                trail: []
-            });
+        function initializeParticles() {
+            particles.length = 0;  // Clear existing particles
+            config.allParticlesActive = true;
+
+            for(let i = 0; i < config.particles; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = config.maxRadius;
+                particles.push({
+                    x: centerX + Math.cos(angle) * radius,
+                    y: centerY + Math.sin(angle) * radius,
+                    angle: angle,
+                    radius: radius,
+                    speed: config.speed * (0.5 + Math.random() * 0.5),
+                    trail: [],
+                    active: true
+                });
+            }
         }
 
+        initializeParticles();
+
         function draw() {
-            // Add semi-transparent black for trail effect
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            let activeCount = 0;
+
             particles.forEach(p => {
-                // Store position for trail
+                if (!p.active) return;
+                activeCount++;
+
                 p.trail.push({ x: p.x, y: p.y });
                 if (p.trail.length > config.trail) {
                     p.trail.shift();
                 }
 
-                // Update position
                 p.angle += p.speed * (1 + (config.maxRadius - p.radius) / config.maxRadius);
                 p.radius -= config.inwardSpeed;
 
-                // Calculate new position
                 p.x = centerX + Math.cos(p.angle) * p.radius;
                 p.y = centerY + Math.sin(p.angle) * p.radius;
 
-                // Draw trail
                 if (p.trail.length > 1) {
                     ctx.beginPath();
                     ctx.moveTo(p.trail[0].x, p.trail[0].y);
@@ -94,7 +104,6 @@
                         ctx.lineTo(p.trail[i].x, p.trail[i].y);
                     }
 
-                    // Color based on radius
                     const colorFactor = 1 - (p.radius / config.maxRadius);
                     ctx.strokeStyle = interpolateColor(config.colorStart, config.colorEnd, colorFactor);
                     ctx.lineWidth = config.particleSize;
@@ -102,20 +111,30 @@
                     ctx.stroke();
                 }
 
-                // Reset particle if it reaches center
                 if (p.radius < config.minRadius) {
-                    p.radius = config.maxRadius;
-                    p.angle = Math.random() * Math.PI * 2;
-                    p.trail = [];
+                    if (config.loop) {
+                        p.radius = config.maxRadius;
+                        p.angle = Math.random() * Math.PI * 2;
+                        p.trail = [];
+                    } else {
+                        p.active = false;
+                    }
                 }
             });
+
+            // Check if all particles are inactive
+            if (!config.loop && activeCount === 0 && config.allParticlesActive) {
+                config.allParticlesActive = false;
+                setTimeout(() => {
+                    initializeParticles();
+                }, 1000);  // Wait 1 second before restarting
+            }
 
             requestAnimationFrame(draw);
         }
 
         draw();
 
-        // Handle window resize
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
