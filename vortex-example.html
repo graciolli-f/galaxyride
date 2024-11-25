@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Cosmic Vortex Example</title>
+    <title>MotionCanvas Vortex Example</title>
     <style>
         body { margin: 0; overflow: hidden; background: black; }
         canvas { display: block; }
@@ -18,38 +18,21 @@
 
         const config = {
             particles: 2000,
-            arms: 1,
-            baseHue: 300,     // Base color (purple)
-            armWidth: 0.05,
-            rotationSpeed: 0.002,
-            expansionSpeed: 0.3,
-            particleSize: .5,
-            tailLength: 0.01,
-            centerGlow: true,
-            colors: {
-                start: '#ff0088',   // Color at the outer edge
-                middle: '#8800ff',  // Optional middle color
-                end: '#00ffff',     // Color at the center
-                glow: 'rgba(255, 0, 136, 0.3)'  // Center glow color
-            }
+            minRadius: 5,
+            maxRadius: 300,
+            speed: 0.02,
+            particleSize: 2,
+            colorStart: '#ff0088',
+            colorEnd: '#00ffff',
+            inwardSpeed: 0.5,
+            trail: 8
         };
 
         const particles = [];
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
 
-        // Helper function to interpolate between three colors
-        function interpolateColors(color1, color2, color3, factor) {
-            if (factor < 0.5) {
-                // Interpolate between first and second color
-                return interpolateColor(color1, color2, factor * 2);
-            } else {
-                // Interpolate between second and third color
-                return interpolateColor(color2, color3, (factor - 0.5) * 2);
-            }
-        }
-
-        // Helper function to interpolate between two colors
+        // Helper function to interpolate colors
         function interpolateColor(color1, color2, factor) {
             const hex2rgb = (hex) => {
                 const r = parseInt(hex.slice(1, 3), 16);
@@ -68,58 +51,41 @@
             return `rgb(${r}, ${g}, ${b})`;
         }
 
-        // Create particles in a spiral pattern
+        // Initialize particles
         for(let i = 0; i < config.particles; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const distance = Math.random() * Math.min(canvas.width, canvas.height) * 0.4;
-            
-            const armOffset = (angle % (Math.PI * 2 / config.arms)) / (Math.PI * 2 / config.arms) - 0.5;
-            const distanceOffset = Math.exp(-Math.abs(armOffset) / config.armWidth) * 50;
-
+            const radius = config.maxRadius;
             particles.push({
-                x: centerX + Math.cos(angle) * (distance + distanceOffset),
-                y: centerY + Math.sin(angle) * (distance + distanceOffset),
+                x: centerX + Math.cos(angle) * radius,
+                y: centerY + Math.sin(angle) * radius,
                 angle: angle,
-                distance: distance,
-                size: Math.random() * config.particleSize + 1,
-                speed: (0.1 + Math.random() * 0.2) * config.rotationSpeed,
-                opacity: Math.random() * 0.5 + 0.5,
+                radius: radius,
+                speed: config.speed * (0.5 + Math.random() * 0.5),
                 trail: []
             });
         }
 
         function draw() {
+            // Add semi-transparent black for trail effect
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            if (config.centerGlow) {
-                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 200);
-                gradient.addColorStop(0, config.colors.glow);
-                gradient.addColorStop(1, 'transparent');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-
             particles.forEach(p => {
+                // Store position for trail
                 p.trail.push({ x: p.x, y: p.y });
-                if (p.trail.length > 20) {
+                if (p.trail.length > config.trail) {
                     p.trail.shift();
                 }
 
-                p.angle += p.speed * (1 - p.distance / 1000);
-                p.distance -= config.expansionSpeed;
+                // Update position
+                p.angle += p.speed * (1 + (config.maxRadius - p.radius) / config.maxRadius);
+                p.radius -= config.inwardSpeed;
 
-                if (p.distance < 0) {
-                    p.distance = Math.min(canvas.width, canvas.height) * 0.4;
-                    p.trail = [];
-                }
+                // Calculate new position
+                p.x = centerX + Math.cos(p.angle) * p.radius;
+                p.y = centerY + Math.sin(p.angle) * p.radius;
 
-                const armOffset = (p.angle % (Math.PI * 2 / config.arms)) / (Math.PI * 2 / config.arms) - 0.5;
-                const distanceOffset = Math.exp(-Math.abs(armOffset) / config.armWidth) * 50;
-                
-                p.x = centerX + Math.cos(p.angle) * (p.distance + distanceOffset);
-                p.y = centerY + Math.sin(p.angle) * (p.distance + distanceOffset);
-
+                // Draw trail
                 if (p.trail.length > 1) {
                     ctx.beginPath();
                     ctx.moveTo(p.trail[0].x, p.trail[0].y);
@@ -128,16 +94,19 @@
                         ctx.lineTo(p.trail[i].x, p.trail[i].y);
                     }
 
-                    // Calculate color based on distance from center
-                    const progress = 1 - (p.distance / (Math.min(canvas.width, canvas.height) * 0.4));
-                    const color = config.colors.middle ? 
-                        interpolateColors(config.colors.start, config.colors.middle, config.colors.end, progress) :
-                        interpolateColor(config.colors.start, config.colors.end, progress);
-
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = p.size;
+                    // Color based on radius
+                    const colorFactor = 1 - (p.radius / config.maxRadius);
+                    ctx.strokeStyle = interpolateColor(config.colorStart, config.colorEnd, colorFactor);
+                    ctx.lineWidth = config.particleSize;
                     ctx.lineCap = 'round';
                     ctx.stroke();
+                }
+
+                // Reset particle if it reaches center
+                if (p.radius < config.minRadius) {
+                    p.radius = config.maxRadius;
+                    p.angle = Math.random() * Math.PI * 2;
+                    p.trail = [];
                 }
             });
 
@@ -146,11 +115,10 @@
 
         draw();
 
+        // Handle window resize
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            centerX = canvas.width / 2;
-            centerY = canvas.height / 2;
         });
     </script>
 </body>

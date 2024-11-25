@@ -807,6 +807,106 @@ class MotionCanvas {
             this.addBehavior(particle, vortexBehavior);
         }
     }
+
+    // Add this method to the MotionCanvas class
+    addFireflies(options = {}) {
+        const config = {
+            fireflies: options.fireflies || 50,
+            maxSpeed: options.maxSpeed || 1,
+            size: options.size || 4,
+            glowSize: options.glowSize || 20,
+            color: options.color || 'purple',
+            wanderStrength: options.wanderStrength || 0.1,
+            fadeSpeed: options.fadeSpeed || 0.02,
+            magnetic: options.magnetic !== undefined ? options.magnetic : true,
+            magneticRadius: options.magneticRadius || 200,
+            magneticStrength: options.magneticStrength || 0.2
+        };
+
+        // Create fireflies
+        for(let i = 0; i < config.fireflies; i++) {
+            const firefly = {
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                vx: (Math.random() - 0.5) * config.maxSpeed,
+                vy: (Math.random() - 0.5) * config.maxSpeed,
+                phase: Math.random() * Math.PI * 2,
+                brightness: Math.random(),
+                isAttracted: false,
+                behaviors: []
+            };
+
+            this.particles.push(firefly);
+
+            // Add firefly behavior
+            const fireflyBehavior = (p) => {
+                // Update phase for pulsing effect
+                p.phase += 0.05;
+                p.brightness = Math.sin(p.phase) * 0.5 + 0.5;
+
+                if (config.magnetic && this.mouseX && this.mouseY) {
+                    // Calculate distance to mouse
+                    const dx = this.mouseX - p.x;
+                    const dy = this.mouseY - p.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < config.magneticRadius) {
+                        // Apply magnetic attraction
+                        const force = (1 - distance / config.magneticRadius) * config.magneticStrength;
+                        p.vx += dx * force;
+                        p.vy += dy * force;
+                        p.isAttracted = true;
+                    } else {
+                        p.isAttracted = false;
+                    }
+                }
+
+                // Add random movement if not attracted
+                if (!p.isAttracted) {
+                    p.vx += (Math.random() - 0.5) * config.wanderStrength;
+                    p.vy += (Math.random() - 0.5) * config.wanderStrength;
+                }
+
+                // Limit speed
+                const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                if (speed > config.maxSpeed) {
+                    p.vx = (p.vx / speed) * config.maxSpeed;
+                    p.vy = (p.vy / speed) * config.maxSpeed;
+                }
+
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Wrap around screen
+                if (p.x < 0) p.x = this.canvas.width;
+                if (p.x > this.canvas.width) p.x = 0;
+                if (p.y < 0) p.y = this.canvas.height;
+                if (p.y > this.canvas.height) p.y = 0;
+
+                // Draw glow
+                const gradient = this.ctx.createRadialGradient(
+                    p.x, p.y, 0,
+                    p.x, p.y, config.glowSize
+                );
+                gradient.addColorStop(0, `rgba(128, 0, 128, ${0.3 * p.brightness})`);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, config.glowSize, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Draw firefly
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, config.size * p.brightness, 0, Math.PI * 2);
+                this.ctx.fillStyle = config.color;
+                this.ctx.fill();
+            };
+
+            this.addBehavior(firefly, fireflyBehavior);
+        }
+    }
 }
 
 // Helper function to convert hex to rgb
