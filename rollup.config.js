@@ -3,7 +3,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import peerDepsExternal from 'rollup-plugin-peer-deps-external';
 
-const config = {
+export default {
   input: 'src/index.js',
   output: [
     {
@@ -29,6 +29,4 @@ const config = {
     }),
     commonjs()
   ]
-};
-
-export default config; 
+}; 

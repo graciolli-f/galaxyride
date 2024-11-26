@@ -1,6 +1,7 @@
 {
   "name": "react-galaxy-canvas",
-  "version": "1.0.2",
+  "version": "1.0.0",
+  "description": "React component for creating interactive motion effects",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "files": [

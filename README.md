@@ -1,5 +1,7 @@
-# MotionCanvas
+# React Galaxy Canvas
 
-A lightweight JavaScript library for creating interactive, generative motion-based art on a canvas with simple declarative commands.
+A lightweight React component for creating interactive, generative motion-based art with simple declarative commands.
 
 ## Installation
+
+</file>

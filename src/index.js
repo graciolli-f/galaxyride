@@ -1,10 +1,6 @@
 import GalaxyCanvas from './components/GalaxyCanvas';
+import { EFFECTS } from './constants/effects';
 
-export const EFFECTS = {
-  STARFIELD: 'starfield',
-  SPIRAL: 'spiral',
-  FIREFLIES: 'fireflies'
-};
-
+export { EFFECTS };
 export { GalaxyCanvas };
 export default GalaxyCanvas; 
